@@ -13,12 +13,13 @@
   "gypfile": true,
   "scripts": {
     "dev": "node index.js",
-    "install": "node-gyp rebuild",
+    "install": "node-gyp-build",
     "configure": "node-gyp configure",
     "build": "node-gyp build",
     "rebuild": "node-gyp rebuild"
   },
   "dependencies": {
-    "node-addon-api": "^8.0.0"
+    "node-addon-api": "^8.0.0",
+    "node-gyp-build": "^4.8.4"
   }
 }
