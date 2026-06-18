@@ -2,9 +2,10 @@
 // Wraps native addon with EventEmitter for idiomatic JS usage
 
 import EventEmitter from 'node:events';
-import nodeGypBuild from 'node-gyp-build';
+import { createRequire } from 'node:module';
 
-const native = nodeGypBuild(import.meta.dirname);
+const require = createRequire(import.meta.url);
+const native = require('./build/Release/smtc_player.node');
 
 class SMTCPlayer extends EventEmitter {
   #started = false;
