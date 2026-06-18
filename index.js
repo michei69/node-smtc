@@ -46,6 +46,12 @@ class SMTCPlayer extends EventEmitter {
   setShuffle(enabled)    { native.setShuffle(enabled); }
 
   /**
+   * Set playback status.
+   * @param {'playing'|'paused'|'stopped'|'changing'|'closed'} status
+   */
+  setPlaybackStatus(status) { native.setPlaybackStatus(status); }
+
+  /**
    * Set auto-repeat mode.
    * @param {'none'|'track'|'list'} mode
    */

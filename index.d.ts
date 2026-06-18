@@ -1,6 +1,7 @@
 import EventEmitter from 'node:events';
 
 type SMTCRepeatMode = 'none' | 'track' | 'list';
+type SMTCPlaybackStatus = 'playing' | 'paused' | 'stopped' | 'changing' | 'closed';
 
 interface SMTCPlayerEvents {
     play:           [];
@@ -27,6 +28,9 @@ declare class SMTCPlayer extends EventEmitter {
 
     /** Toggle shuffle. */
     setShuffle(enabled: boolean): void;
+
+    /** Set playback status. */
+    setPlaybackStatus(status: SMTCPlaybackStatus): void;
 
     /** Set auto-repeat mode. */
     setAutoRepeat(mode: SMTCRepeatMode): void;

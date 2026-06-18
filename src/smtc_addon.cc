@@ -64,8 +64,9 @@ enum class SmtcOp : WPARAM {
     SetStartTime    = 8,
     SetMinSeekTime  = 9,
     SetPosition     = 10,
-    SetMaxSeekTime  = 11,
-    SetEndTime      = 12,
+    SetMaxSeekTime   = 11,
+    SetEndTime       = 12,
+    SetPlaybackStatus = 13,
 };
 
 struct SmtcOpData {
@@ -75,6 +76,7 @@ struct SmtcOpData {
         bool    shuffle;   // OP_SetShuffle
         int     repeat;    // OP_SetAutoRepeat (0=none,1=track,2=list)
         int64_t timelineMs; // OP_SetStartTime .. OP_SetEndTime (milliseconds)
+        int     status;     // OP_SetPlaybackStatus (0=Playing,1=Paused,2=Stopped,3=Changing,4=Closed)
     };
     ~SmtcOpData() {
         if (static_cast<int>(op) >= 1 && static_cast<int>(op) <= 5) delete[] str;
@@ -204,6 +206,17 @@ static LRESULT CALLBACK SmtcWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM l
             case SmtcOp::SetEndTime:
                 { std::lock_guard<std::mutex> lk(g_timelineMutex); g_timeline.endTime = data->timelineMs; }
                 ApplyAllTimeline();
+                break;
+            case SmtcOp::SetPlaybackStatus: {
+                auto s = wm::MediaPlaybackStatus::Playing;
+                switch (data->status) {
+                case 1: s = wm::MediaPlaybackStatus::Paused;   break;
+                case 2: s = wm::MediaPlaybackStatus::Stopped;  break;
+                case 3: s = wm::MediaPlaybackStatus::Changing; break;
+                case 4: s = wm::MediaPlaybackStatus::Closed;   break;
+                default: break; // 0 = Playing
+                }
+                if (g_controls) g_controls.PlaybackStatus(s);
                 break;
             }
         } catch (...) {}
@@ -574,6 +587,24 @@ static Napi::Value SetShuffle(const Napi::CallbackInfo& info) {
 }
 
 // ============================================================================
+// N-API: setPlaybackStatus(status)
+//   status: "playing" | "paused" | "stopped" | "changing" | "closed"
+// ============================================================================
+static Napi::Value SetPlaybackStatus(const Napi::CallbackInfo& info) {
+    if (info.Length() < 1 || !info[0].IsString()) return info.Env().Undefined();
+    auto s = info[0].As<Napi::String>().Utf8Value();
+    int status = 0;
+    if (s == "paused")        status = 1;
+    else if (s == "stopped")  status = 2;
+    else if (s == "changing") status = 3;
+    else if (s == "closed")   status = 4;
+    auto data = new SmtcOpData{SmtcOp::SetPlaybackStatus};
+    data->status = status;
+    PostSmtcOp(data);
+    return info.Env().Undefined();
+}
+
+// ============================================================================
 // N-API: setAutoRepeat(mode)
 //   mode: "none" | "track" | "list"
 // ============================================================================
@@ -645,7 +676,8 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports.Set("setMinSeekTime",   Napi::Function::New(env, SetMinSeekTime));
     exports.Set("setPosition",      Napi::Function::New(env, SetPosition));
     exports.Set("setMaxSeekTime",   Napi::Function::New(env, SetMaxSeekTime));
-    exports.Set("setEndTime",       Napi::Function::New(env, SetEndTime));
+    exports.Set("setEndTime",         Napi::Function::New(env, SetEndTime));
+    exports.Set("setPlaybackStatus",   Napi::Function::New(env, SetPlaybackStatus));
 
     napi_add_env_cleanup_hook(env, Cleanup, nullptr);
     return exports;
