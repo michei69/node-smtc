@@ -2,9 +2,10 @@
 // Wraps native addon with EventEmitter for idiomatic JS usage
 
 import EventEmitter from 'node:events';
-import nodeGypBuild from 'node-gyp-build';
+import { createRequire } from 'node:module';
 
-const native = nodeGypBuild(import.meta.dirname);
+const require = createRequire(import.meta.url);
+const native = require('./build/Release/smtc_player.node');
 
 class SMTCPlayer extends EventEmitter {
   #started = false;
@@ -26,6 +27,17 @@ class SMTCPlayer extends EventEmitter {
     this.#started = true;
   }
 
+  /**
+   * Stop SMTC session. Tears down the background thread and releases
+   * the SMTC session. Safe to call multiple times. After stop(),
+   * start() can be called again to create a fresh session.
+   */
+  stop() {
+    if (!this.#started) return;
+    native.stop();
+    this.#started = false;
+  }
+
   /** @param {string} value */
   setArtist(value)       { native.setArtist(value); }
 
@@ -40,6 +52,9 @@ class SMTCPlayer extends EventEmitter {
 
   /** @param {string} path — filesystem path to image file */
   setThumbnail(path)     { native.setThumbnail(path); }
+
+  /** @param {string} id — app identity string shown in SMTC UI */
+  setAppMediaId(id)      { native.setAppMediaId(id); }
 
   /** @param {boolean} enabled */
   setShuffle(enabled)    { native.setShuffle(enabled); }
