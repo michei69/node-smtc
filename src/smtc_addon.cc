@@ -486,13 +486,45 @@ static void MessageThreadProc() {
 }
 
 // ============================================================================
-// Cleanup hook -- Node.js calls before addon unload
+// Stop — tear down SMTC session and background thread.
+// Safe to call multiple times; no-op if not running.
+// After stop(), start() can be called again.
 // ============================================================================
-static void Cleanup(void*) {
+static void DoStop() {
+    if (!g_running) return;
     g_running = false;
     if (g_hwnd) PostMessageW(g_hwnd, WM_QUIT, 0, 0);
     if (g_thread.joinable()) g_thread.join();
-    if (g_eventTsfn) { g_eventTsfn.Release(); g_eventTsfn = nullptr; }
+    g_thread = std::thread();  // reset to not-joinable state
+
+    // Flush any pending ops that never got delivered
+    {
+        std::lock_guard<std::mutex> lock(g_pendingMutex);
+        g_pendingOps.clear();
+    }
+
+    if (g_eventTsfn) {
+        g_eventTsfn.Release();
+        g_eventTsfn = nullptr;
+    }
+
+    g_hwnd = nullptr;
+    g_appMediaId.clear();
+}
+
+// ============================================================================
+// N-API: stop()
+// ============================================================================
+static Napi::Value Stop(const Napi::CallbackInfo& info) {
+    DoStop();
+    return info.Env().Undefined();
+}
+
+// ============================================================================
+// Cleanup hook -- Node.js calls before addon unload
+// ============================================================================
+static void Cleanup(void*) {
+    DoStop();
 }
 
 // ============================================================================
@@ -704,6 +736,7 @@ static Napi::Object Init(Napi::Env env, Napi::Object exports) {
     exports.Set("setMaxSeekTime",   Napi::Function::New(env, SetMaxSeekTime));
     exports.Set("setEndTime",         Napi::Function::New(env, SetEndTime));
     exports.Set("setPlaybackStatus",   Napi::Function::New(env, SetPlaybackStatus));
+    exports.Set("stop",               Napi::Function::New(env, Stop));
 
     napi_add_env_cleanup_hook(env, Cleanup, nullptr);
     return exports;

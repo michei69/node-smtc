@@ -27,6 +27,17 @@ class SMTCPlayer extends EventEmitter {
     this.#started = true;
   }
 
+  /**
+   * Stop SMTC session. Tears down the background thread and releases
+   * the SMTC session. Safe to call multiple times. After stop(),
+   * start() can be called again to create a fresh session.
+   */
+  stop() {
+    if (!this.#started) return;
+    native.stop();
+    this.#started = false;
+  }
+
   /** @param {string} value */
   setArtist(value)       { native.setArtist(value); }
 

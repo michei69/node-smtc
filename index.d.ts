@@ -18,6 +18,9 @@ declare class SMTCPlayer extends EventEmitter {
     /** Start SMTC session. Idempotent. */
     start(): void;
 
+    /** Stop SMTC session. Tears down background thread. Safe to call multiple times. */
+    stop(): void;
+
     setArtist(value: string): void;
     setAlbumArtist(value: string): void;
     setTitle(value: string): void;
